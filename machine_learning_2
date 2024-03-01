@@ -1,0 +1,85 @@
+###########################
+#
+#         training data
+#
+#
+#
+############################
+rm(list=ls())
+
+library(readxl)
+library(dplyr)
+library(randomForest)
+
+# 使用iris数据集
+#data(iris)
+data <- read_excel("Downloads/客服风控资料同步当月每小时各兄弟工作量统计.xlsx", sheet = 2)
+
+# 设置随机数种子以确保结果可重复
+set.seed(123)
+
+# 随机将数据集分成训练集（70%）和测试集（30%）
+index <- sample(1:nrow(data), 0.7 * nrow(data))
+train_data <- data[index, ]
+test_data <- data[-index, ]
+
+# 创建随机森林模型
+rf_model <- randomForest(Species ~ ., data = train_data, ntree = 500)
+
+# 使用模型在测试集上进行预测
+predicted_species <- predict(rf_model, newdata = test_data)
+
+# 计算模型性能指标（例如，准确率）
+accuracy <- sum(predicted_species == test_data$Species) / nrow(test_data)
+print(paste("准确率:", round(accuracy, 2)))
+
+
+# 绘制特征重要性图
+importance <- importance(rf_model)
+varImpPlot(rf_model)
+
+
+library(stats)
+library(graphics)
+
+# 选择要用于聚类的特征（这里以前两列为例）
+features <- data[, c(2,11)]
+iris
+# 指定要创建的簇的数量（K的值）
+k <- 10
+
+# 创建K均值聚类模型
+kmeans_model <- kmeans(features, centers = k)
+
+# 输出聚类结果
+cat("K均值聚类结果:\n")
+print(kmeans_model)
+
+# 绘制聚类结果的散点图
+plot(features, col = kmeans_model$cluster, pch = 19, main = "K均值聚类结果", xlab = "Sepal.Length", ylab = "Sepal.Width")
+
+# 绘制聚类中心点
+points(kmeans_model$centers, col = 1:k, pch = 3, cex = 2)
+
+# 使用肘部法则确定K值 SSE开始快速下降并趋于平稳的点。通常，肘部点对应的K值可以作为最佳的簇数。
+sse <- c()
+for (k in 1:10) {
+  kmeans_model <- kmeans(features, centers = k)
+  sse[k] <- kmeans_model$tot.withinss
+}
+
+plot(1:10, sse, type = "b", xlab = "K", ylab = "SSE")
+
+# 使用轮廓系数确定K值
+library(cluster)
+
+silhouette_scores <- c()
+for (k in 2:10) {
+  kmeans_model <- kmeans(features, centers = k)
+  silhouette_scores[k] <- silhouette(kmeans_model$cluster, dist(features))
+}
+
+plot(2:10, silhouette_scores[2:10], type = "b", xlab = "K", ylab = "Silhouette Score")
+
+
+
