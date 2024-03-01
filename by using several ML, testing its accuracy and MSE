@@ -1,0 +1,75 @@
+###########################
+#
+#         testing bitcoin statistic
+#         by using several ML, testing its accuracy and MSE 
+#
+#
+############################
+
+'因为时间与价格的关系比较不像线性关系，所以用随机森林和线性回归的话虽然R方很漂亮但是MSE会很高
+所以可能要用更高级的，比如msgboost
+或者只能回到计量模型：GARCH，ARIMA模型
+'
+rm(list=ls())
+
+library(readxl)
+library(dplyr)
+
+############################################### 載入資料 ############################################################################
+
+rawdata1 <- read.csv('/Users/marshaw/Downloads/archive/1 Bitcoin.csv')
+rawdata2 <- read.csv('/Users/marshaw/Downloads/archive/Bitcoin (April-October 2023).csv')
+rawdata2 <- rawdata2[12:nrow(rawdata2),]
+rawdata1 <- rbind(rawdata1, rawdata2)
+rm(rawdata2)
+
+##处理报酬率
+return <- diff(log(rawdata1$Close)) %>% as.numeric() %>% as.data.frame()
+return <- rbind(NA, return)
+rawdata1 <- cbind(rawdata1, return)
+colnames(rawdata1$.) <- "Return"
+rawdata1 <- as.data.frame(rawdata1)
+rawdata1 <- rawdata1[14:3300,]
+split_date <- strsplit(rawdata1[,1],"-")
+
+timedate <- NULL
+for (i in 1:length(split_date)) {
+  cat(i,"/",length(split_date), "\n")
+  
+  tem <- split_date[[i]] %>% as.data.frame() %>% t()
+  timedate <- rbind(timedate, tem)
+}
+rm(split_date,tem)
+colnames(timedate) <- c("Year","Month", "Day")
+rawdata1 <- cbind(timedate, rawdata1)
+
+data_list <- split(rawdata1, f = rawdata1$Month)
+
+data_statistic <- NULL
+for (i in 1:length(data_list)) {
+  tem <- data_list[[i]]
+  mean_return <- mean(tem[,11])
+  sum_return <- sum(tem[,11])
+  tem1 <- cbind(mean_return, sum_return)
+  data_statistic <- rbind(data_statistic, tem1)
+}
+month <- names(data_list) %>% as.data.frame()
+data_statistic <- cbind(month, data_statistic) %>% as.data.frame()
+mean_return <- data_statistic[,c(1,2)] %>% as.data.frame()
+sum_return <- data_statistic[,c(1,3)] %>% as.data.frame()
+
+# 绘制柱状图
+barplot(sum_return, 
+        main = "柱状图示例",  # 图表标题
+        xlab = "月份",       # x轴标签
+        ylab = "整月报酬率",       # y轴标签
+        col = "blue",        # 柱子的颜色
+        ) 
+
+
+
+
+
+
+
+
